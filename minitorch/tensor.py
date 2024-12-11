@@ -385,5 +385,3 @@ class Tensor:
 
     def __hash__(self) -> int:
         return self.unique_id
-
-

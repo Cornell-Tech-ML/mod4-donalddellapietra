@@ -62,14 +62,16 @@ class CNNSentimentKim(minitorch.Module):
         embedding_size=50,
         filter_sizes=[3, 4, 5],
         dropout=0.25,
-        num_classes=2,
     ):
         super().__init__()
         self.feature_map_size = feature_map_size
         self.convs = [
             Conv1d(embedding_size, feature_map_size, fs) for fs in filter_sizes
         ]
-        self.linear = Linear(feature_map_size * len(filter_sizes), num_classes)
+        self.conv1 = Conv1d(embedding_size, feature_map_size, filter_sizes[0])
+        self.conv2 = Conv1d(embedding_size, feature_map_size, filter_sizes[1])
+        self.conv3 = Conv1d(embedding_size, feature_map_size, filter_sizes[2])
+        self.linear = Linear(feature_map_size, 1)
         self.dropout = dropout
 
 
@@ -77,25 +79,20 @@ class CNNSentimentKim(minitorch.Module):
         """
         embeddings tensor: [batch x sentence length x embedding dim]
         """
-        # Step 1: Apply 1D convolutions and ReLU
-        conv_results = [
-            conv(embeddings.permute(0, 2, 1)).relu() for conv in self.convs
-        ]
 
-        # Step 2: Max-over-time pooling using the Max class
-        pooled = [max(result, minitorch.tensor(2)) for result in conv_results]
+        embeddings = embeddings.permute(0, 2, 1)
 
-        # Stack pooled features along a new dimension and then flatten
-        stacked = minitorch.stack(pooled, dim=1)  # Stack along a new dimension
-        concatenated = stacked.view(stacked.shape[0], -1)  # Flatten the stacked tensor
+        a1 = self.conv1(embeddings).relu()
+        a2 = self.conv2(embeddings).relu()
+        a3 = self.conv3(embeddings).relu()
+        x = minitorch.max(a1, 2) + minitorch.max(a2, 2) + minitorch.max(a3, 2)
 
+        x = self.linear(x.view(x.shape[0], self.feature_map_size))
 
-        # Step 3: Apply Linear, ReLU, and Dropout
-        x = self.linear(concatenated).relu()
-        x = dropout(x, p=self.dropout, training=self.training)
+        x = minitorch.dropout(x, p=self.dropout, ignore = (self.mode == "eval"))
 
         # Step 4: Apply sigmoid
-        return x.sigmoid()
+        return x.sigmoid().view(x.shape[0])
 
 
 # Evaluation helper methods

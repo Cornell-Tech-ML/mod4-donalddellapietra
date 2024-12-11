@@ -176,11 +176,9 @@ def prod(xs: Iterable[float]) -> float:
     return reduce(mul, xs, 1.0)
 
 
-
 # def max(xs: Iterable[float]) -> float:
 #     """Return the maximum element in a list."""
 #     return reduce(max, xs, float("-inf"))
-
 
 
 # Implement the following core functions
