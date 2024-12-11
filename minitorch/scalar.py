@@ -112,21 +112,24 @@ class Scalar:
         return self.history is not None and self.history.last_fn is None
 
     def is_constant(self) -> bool:
+        """True if this variable is not a result of a `ScalarFunction`"""
         return self.history is None
 
     @property
     def parents(self) -> Iterable[Variable]:
-        """Get the variables used to create this one."""
+        """Returns the parent variables of this variable"""
         assert self.history is not None
         return self.history.inputs
 
     def chain_rule(self, d_output: Any) -> Iterable[Tuple[Variable, Any]]:
+        """Applies the chain rule to the variable"""
         h = self.history
         assert h is not None
         assert h.last_fn is not None
         assert h.ctx is not None
 
-        raise NotImplementedError("Need to include this file from past assignment.")
+        derivatives = h.last_fn._backward(h.ctx, d_output)
+        return zip(h.inputs, derivatives)
 
     def backward(self, d_output: Optional[float] = None) -> None:
         """Calls autodiff to fill in the derivatives for the history of this object.
@@ -141,15 +144,61 @@ class Scalar:
             d_output = 1.0
         backpropagate(self, d_output)
 
-    raise NotImplementedError("Need to include this file from past assignment.")
+    def __add__(self, b: ScalarLike) -> Scalar:
+        return Add.apply(self, b)
+
+    def __sub__(self, b: ScalarLike) -> Scalar:
+        return Add.apply(self, Neg.apply(b))
+
+    def __neg__(self) -> Scalar:
+        return Neg.apply(self)
+
+    def __lt__(self, b: ScalarLike) -> Scalar:
+        return LT.apply(self, b)
+
+    def __eq__(self, b: ScalarLike) -> Scalar:
+        return EQ.apply(self, b)
+
+    def __gt__(self, b: ScalarLike) -> Scalar:
+        return LT.apply(b, self)
+
+    def log(self) -> Scalar:
+        """Applies the logarithm to the scalar"""
+        return Log.apply(self)
+
+    def exp(self) -> Scalar:
+        """Applies the exponential to the scalar"""
+        return Exp.apply(self)
+
+    def __inv__(self) -> Scalar:
+        """Applies the inverse to the scalar"""
+        return Inv.apply(self)
+
+    def neg(self) -> Scalar:
+        """Applies the negation to the scalar"""
+        return Neg.apply(self)
+
+    def __pos__(self) -> Scalar:
+        return self
+
+    def relu(self) -> Scalar:
+        """Applies the ReLU to the scalar"""
+        return ReLU.apply(self)
+
+    def sigmoid(self) -> Scalar:
+        """Applies the sigmoid to the scalar"""
+        return Sigmoid.apply(self)
+
+    def __hash__(self):
+        return hash(self.unique_id)
 
 
 def derivative_check(f: Any, *scalars: Scalar) -> None:
     """Checks that autodiff works on a python function.
     Asserts False if derivative is incorrect.
 
-    Parameters
-    ----------
+    Args:
+    ----
         f : function from n-scalars to 1-scalar.
         *scalars  : n input scalar values.
 

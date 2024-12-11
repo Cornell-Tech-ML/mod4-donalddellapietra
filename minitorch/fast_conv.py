@@ -90,9 +90,38 @@ def _tensor_conv1d(
     s1 = input_strides
     s2 = weight_strides
 
-    # TODO: Implement for Task 4.1.
-    raise NotImplementedError("Need to implement for Task 4.1")
-
+       # Iterate over each element in the output tensor
+    for b in range(batch):
+        for oc in range(out_channels):
+            for ow in range(out_width):
+                # Initialize the output value
+                out_value = 0.0
+                for ic in range(in_channels):
+                    for kw_idx in range(kw):
+                        # Calculate input index
+                        iw = ow + kw_idx if not reverse else ow - kw_idx
+                        if 0 <= iw < width:
+                            # Calculate positions in the input and weight tensors
+                            input_pos = (
+                                b * input_strides[0]
+                                + ic * input_strides[1]
+                                + iw * input_strides[2]
+                            )
+                            weight_pos = (
+                                oc * weight_strides[0]
+                                + ic * weight_strides[1]
+                                + kw_idx * weight_strides[2]
+                            )
+                            # Accumulate the convolution result
+                            out_value += input[input_pos] * weight[weight_pos]
+                # Calculate position in the output tensor
+                out_pos = (
+                    b * out_strides[0]
+                    + oc * out_strides[1]
+                    + ow * out_strides[2]
+                )
+                # Store the result
+                out[out_pos] = out_value
 
 tensor_conv1d = njit(_tensor_conv1d, parallel=True)
 
@@ -203,7 +232,7 @@ def _tensor_conv2d(
         reverse (bool): anchor weight at top-left or bottom-right
 
     """
-    batch_, out_channels, _, _ = out_shape
+    batch_, out_channels, out_height, out_width = out_shape
     batch, in_channels, height, width = input_shape
     out_channels_, in_channels_, kh, kw = weight_shape
 
@@ -219,8 +248,44 @@ def _tensor_conv2d(
     s10, s11, s12, s13 = s1[0], s1[1], s1[2], s1[3]
     s20, s21, s22, s23 = s2[0], s2[1], s2[2], s2[3]
 
-    # TODO: Implement for Task 4.2.
-    raise NotImplementedError("Need to implement for Task 4.2")
+    # Iterate over each element in the output tensor
+    for b in range(batch):
+        for oc in range(out_channels):
+            for oh in range(out_height):
+                for ow in range(out_width):
+                    # Initialize the output value
+                    out_value = 0.0
+                    for ic in range(in_channels):
+                        for kh_idx in range(kh):
+                            for kw_idx in range(kw):
+                                # Calculate input indices
+                                ih = oh + kh_idx if not reverse else oh - kh_idx
+                                iw = ow + kw_idx if not reverse else ow - kw_idx
+                                if 0 <= ih < height and 0 <= iw < width:
+                                    # Calculate positions in the input and weight tensors
+                                    input_pos = (
+                                        b * input_strides[0]
+                                        + ic * input_strides[1]
+                                        + ih * input_strides[2]
+                                        + iw * input_strides[3]
+                                    )
+                                    weight_pos = (
+                                        oc * weight_strides[0]
+                                        + ic * weight_strides[1]
+                                        + kh_idx * weight_strides[2]
+                                        + kw_idx * weight_strides[3]
+                                    )
+                                    # Accumulate the convolution result
+                                    out_value += input[input_pos] * weight[weight_pos]
+                    # Calculate position in the output tensor
+                    out_pos = (
+                        b * out_strides[0]
+                        + oc * out_strides[1]
+                        + oh * out_strides[2]
+                        + ow * out_strides[3]
+                    )
+                    # Store the result
+                    out[out_pos] = out_value
 
 
 tensor_conv2d = njit(_tensor_conv2d, parallel=True, fastmath=True)

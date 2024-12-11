@@ -5,6 +5,7 @@ import embeddings
 import minitorch
 from datasets import load_dataset
 
+
 BACKEND = minitorch.TensorBackend(minitorch.FastOps)
 
 
@@ -34,8 +35,11 @@ class Conv1d(minitorch.Module):
         self.bias = RParam(1, out_channels, 1)
 
     def forward(self, input):
-        # TODO: Implement for Task 4.5.
-        raise NotImplementedError("Need to implement for Task 4.5")
+        # Perform 1D convolution using the conv1d function
+        output = minitorch.conv1d(input, self.weights.value)
+        # Add bias to the output
+        return output + self.bias.value
+
 
 
 class CNNSentimentKim(minitorch.Module):
@@ -58,18 +62,40 @@ class CNNSentimentKim(minitorch.Module):
         embedding_size=50,
         filter_sizes=[3, 4, 5],
         dropout=0.25,
+        num_classes=2,
     ):
         super().__init__()
         self.feature_map_size = feature_map_size
-        # TODO: Implement for Task 4.5.
-        raise NotImplementedError("Need to implement for Task 4.5")
+        self.convs = [
+            Conv1d(embedding_size, feature_map_size, fs) for fs in filter_sizes
+        ]
+        self.linear = Linear(feature_map_size * len(filter_sizes), num_classes)
+        self.dropout = dropout
+
 
     def forward(self, embeddings):
         """
         embeddings tensor: [batch x sentence length x embedding dim]
         """
-        # TODO: Implement for Task 4.5.
-        raise NotImplementedError("Need to implement for Task 4.5")
+        # Step 1: Apply 1D convolutions and ReLU
+        conv_results = [
+            conv(embeddings.permute(0, 2, 1)).relu() for conv in self.convs
+        ]
+
+        # Step 2: Max-over-time pooling using the Max class
+        pooled = [max(result, minitorch.tensor(2)) for result in conv_results]
+
+        # Stack pooled features along a new dimension and then flatten
+        stacked = minitorch.stack(pooled, dim=1)  # Stack along a new dimension
+        concatenated = stacked.view(stacked.shape[0], -1)  # Flatten the stacked tensor
+
+
+        # Step 3: Apply Linear, ReLU, and Dropout
+        x = self.linear(concatenated).relu()
+        x = dropout(x, p=self.dropout, training=self.training)
+
+        # Step 4: Apply sigmoid
+        return x.sigmoid()
 
 
 # Evaluation helper methods
