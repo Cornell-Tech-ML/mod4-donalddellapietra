@@ -42,9 +42,9 @@ class Conv2d(minitorch.Module):
 
     def forward(self, input):
         # Perform 2D convolution using the conv2d function
-        output = conv2d(input, self.weights.value)
+        output = minitorch.conv2d(input, self.weights.value)
         # Add bias to the output
-        return output + self.bias.value.view(1, -1, 1, 1)
+        return output + self.bias.value.view(1, self.bias.value.shape[0], 1, 1)
 
 
 # class Network(minitorch.Module):
@@ -93,7 +93,6 @@ class Network(minitorch.Module):
 
     def __init__(self):
         super().__init__()
-
         # Define layers
         self.conv1 = Conv2d(in_channels=1, out_channels=4, kh=3, kw=3)
         self.conv2 = Conv2d(in_channels=4, out_channels=8, kh=3, kw=3)
@@ -109,21 +108,23 @@ class Network(minitorch.Module):
         self.out = self.conv2(self.mid).relu()
 
         # Step 3: Apply 2D pooling
-        pooled = maxpool2d(self.out, kernel=(4, 4))
+        pooled = minitorch.maxpool2d(self.out, kernel=(4, 4))
+
 
         # Step 4: Flatten
-        batch_size = pooled.shape[0]
-        flattened = pooled.view(batch_size, -1)
+        batch_size, channels, height, width = pooled.shape
+        flattened_size = channels * height * width
+        flattened = pooled.view(batch_size, flattened_size)
 
         # Step 5: Apply first linear layer, ReLU, and Dropout
         x = self.linear1(flattened).relu()
-        x = dropout(x, p=self.dropout, training=self.training)
+        x = minitorch.dropout(x, p=self.dropout, training=self.training)
 
         # Step 6: Apply second linear layer
         x = self.linear2(x)
 
         # Step 7: Apply logsoftmax
-        return logsoftmax(x, dim=1)
+        return minitorch.logsoftmax(x, dim=1)
 
 
 

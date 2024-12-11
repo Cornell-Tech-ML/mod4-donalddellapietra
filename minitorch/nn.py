@@ -47,8 +47,8 @@ def tile(input: Tensor, kernel: Tuple[int, int]) -> Tuple[Tensor, int, int]:
     # Flatten the kernel dimensions
 
     tiled = tiled.view(batch, channel, new_height, new_width, kh * kw)
-    print(tiled.shape)
-    print(tiled)
+    # print(tiled.shape)
+    # print(tiled)
     return tiled, new_height, new_width
 
 
