@@ -38,6 +38,7 @@ class ScalarFunction:
 
     @classmethod
     def apply(cls, *vals: ScalarLike) -> Scalar:
+        """Apply the scalar function to the input values."""
         raw_vals = []
         scalars = []
         for v in vals:
@@ -66,10 +67,12 @@ class Add(ScalarFunction):
 
     @staticmethod
     def forward(ctx: Context, a: float, b: float) -> float:
+        """Forward pass for addition"""
         return a + b
 
     @staticmethod
     def backward(ctx: Context, d_output: float) -> Tuple[float, ...]:
+        """Backward pass for addition"""
         return d_output, d_output
 
 
@@ -78,11 +81,13 @@ class Log(ScalarFunction):
 
     @staticmethod
     def forward(ctx: Context, a: float) -> float:
+        """Forward pass for logarithm"""
         ctx.save_for_backward(a)
         return operators.log(a)
 
     @staticmethod
     def backward(ctx: Context, d_output: float) -> float:
+        """Backward pass for logarithm"""
         (a,) = ctx.saved_values
         return operators.log_back(a, d_output)
 
@@ -90,3 +95,123 @@ class Log(ScalarFunction):
 # To implement.
 
 
+class Mul(ScalarFunction):
+    """Multiplication function $f(x, y) = x * y$"""
+
+    @staticmethod
+    def forward(ctx: Context, a: float, b: float) -> float:
+        """Forward pass for multiplication"""
+        ctx.save_for_backward(a, b)
+        return operators.mul(a, b)
+
+    @staticmethod
+    def backward(ctx: Context, d_output: float) -> Tuple[float, ...]:
+        """Backward pass for multiplication"""
+        (a, b) = ctx.saved_values
+        return b * d_output, a * d_output
+
+
+class Inv(ScalarFunction):
+    """Inverse function $f(x) = 1 / x$"""
+
+    @staticmethod
+    def forward(ctx: Context, a: float) -> float:
+        """Forward pass for inverse"""
+        ctx.save_for_backward(a)
+        return operators.inv(a)
+
+    @staticmethod
+    def backward(ctx: Context, d_output: float) -> float:
+        """Backward pass for inverse"""
+        (a,) = ctx.saved_values
+        return operators.inv_back(a, d_output)
+
+
+class Neg(ScalarFunction):
+    """Negation function $f(x) = -x$"""
+
+    @staticmethod
+    def forward(ctx: Context, a: float) -> float:
+        """Forward pass for negation"""
+        return float(operators.neg(a))
+
+    @staticmethod
+    def backward(ctx: Context, d_output: float) -> float:
+        """Backward pass for negation"""
+        return float(operators.neg(d_output))
+
+
+class Sigmoid(ScalarFunction):
+    r"""Sigmoid function $f(x) = \frac{1}{1 + e^{-x}}$"""
+
+    @staticmethod
+    def forward(ctx: Context, a: float) -> float:
+        """Forward pass for sigmoid"""
+        ctx.save_for_backward(a)
+        return operators.sigmoid(a)
+
+    @staticmethod
+    def backward(ctx: Context, d_output: float) -> float:
+        """Backward pass for sigmoid"""
+        (a,) = ctx.saved_values
+        return float(operators.sigmoid_back(a, d_output))
+
+
+class ReLU(ScalarFunction):
+    """Rectified Linear Unit function $f(x) = max(0, x)$"""
+
+    @staticmethod
+    def forward(ctx: Context, a: float) -> float:
+        """Forward pass for ReLU"""
+        ctx.save_for_backward(a)
+        return float(operators.relu(a))
+
+    @staticmethod
+    def backward(ctx: Context, d_output: float) -> float:
+        """Backward pass for ReLU"""
+        (a,) = ctx.saved_values
+        return float(operators.relu_back(a, d_output))
+
+
+class Exp(ScalarFunction):
+    """Exponential function $f(x) = e^x$"""
+
+    @staticmethod
+    def forward(ctx: Context, a: float) -> float:
+        """Forward pass for exponential"""
+        ctx.save_for_backward(a)
+        return float(operators.exp(a))
+
+    @staticmethod
+    def backward(ctx: Context, d_output: float) -> float:
+        """Backward pass for exponential"""
+        (a,) = ctx.saved_values
+        return float(operators.exp_back(a, d_output))
+
+
+class LT(ScalarFunction):
+    """Less than function $f(x, y) = x < y$"""
+
+    @staticmethod
+    def forward(ctx: Context, a: float, b: float) -> float:
+        """Forward pass for less than"""
+        return float(operators.lt(a, b))
+
+    @staticmethod
+    def backward(ctx: Context, d_output: float) -> Tuple[float, ...]:
+        """Backward pass for less than"""
+        return 0.0, 0.0
+
+
+class EQ(ScalarFunction):
+    """Equal function $f(x, y) = x == y$"""
+
+    @staticmethod
+    def forward(ctx: Context, a: float, b: float) -> float:
+        """Forward pass for equal"""
+        return float(operators.eq(a, b))
+
+    @staticmethod
+    def backward(ctx: Context, d_output: float) -> Tuple[float, ...]:
+        """Backward pass for equal"""
+        return 0.0, 0.0

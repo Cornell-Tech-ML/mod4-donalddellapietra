@@ -5,6 +5,7 @@ import embeddings
 import minitorch
 from datasets import load_dataset
 
+
 BACKEND = minitorch.TensorBackend(minitorch.FastOps)
 
 
@@ -34,8 +35,11 @@ class Conv1d(minitorch.Module):
         self.bias = RParam(1, out_channels, 1)
 
     def forward(self, input):
-        # TODO: Implement for Task 4.5.
-        raise NotImplementedError("Need to implement for Task 4.5")
+        # Perform 1D convolution using the conv1d function
+        output = minitorch.conv1d(input, self.weights.value)
+        # Add bias to the output
+        return output + self.bias.value
+
 
 
 class CNNSentimentKim(minitorch.Module):
@@ -61,15 +65,34 @@ class CNNSentimentKim(minitorch.Module):
     ):
         super().__init__()
         self.feature_map_size = feature_map_size
-        # TODO: Implement for Task 4.5.
-        raise NotImplementedError("Need to implement for Task 4.5")
+        self.convs = [
+            Conv1d(embedding_size, feature_map_size, fs) for fs in filter_sizes
+        ]
+        self.conv1 = Conv1d(embedding_size, feature_map_size, filter_sizes[0])
+        self.conv2 = Conv1d(embedding_size, feature_map_size, filter_sizes[1])
+        self.conv3 = Conv1d(embedding_size, feature_map_size, filter_sizes[2])
+        self.linear = Linear(feature_map_size, 1)
+        self.dropout = dropout
+
 
     def forward(self, embeddings):
         """
         embeddings tensor: [batch x sentence length x embedding dim]
         """
-        # TODO: Implement for Task 4.5.
-        raise NotImplementedError("Need to implement for Task 4.5")
+
+        embeddings = embeddings.permute(0, 2, 1)
+
+        a1 = self.conv1(embeddings).relu()
+        a2 = self.conv2(embeddings).relu()
+        a3 = self.conv3(embeddings).relu()
+        x = minitorch.max(a1, 2) + minitorch.max(a2, 2) + minitorch.max(a3, 2)
+
+        x = self.linear(x.view(x.shape[0], self.feature_map_size))
+
+        x = minitorch.dropout(x, p=self.dropout, ignore = (self.mode == "eval"))
+
+        # Step 4: Apply sigmoid
+        return x.sigmoid().view(x.shape[0])
 
 
 # Evaluation helper methods

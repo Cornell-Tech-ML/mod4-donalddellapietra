@@ -12,6 +12,52 @@ def RParam(*shape):
     return minitorch.Parameter(r)
 
 
+class Network(minitorch.Module):
+    def __init__(self, hidden_layers):
+        super().__init__()
+        self.layer1 = Linear(2, hidden_layers)
+        self.layer2 = Linear(hidden_layers, hidden_layers)
+        self.layer3 = Linear(hidden_layers, 1)
+
+    def forward(self, x):
+        middle = self.layer1.forward(x).relu()
+        end = self.layer2.forward(middle).relu()
+        return self.layer3.forward(end).sigmoid()
+
+
+class Linear(minitorch.Module):
+    def __init__(self, in_size, out_size):
+        super().__init__()
+        self.weights = RParam(in_size, out_size)
+        self.bias = RParam(out_size)
+
+    def forward(self, inputs):
+        weights_tensor = self.weights.value
+        bias_tensor = self.bias.value
+
+        # print(f"inputs shape {inputs.shape}") # 50, 2
+        # print(weights_tensor.shape) # 2, 20
+        # print(bias_tensor.shape) # 20
+
+        num_pts, in_size = inputs.shape
+        out_size = self.weights.value.shape[1]
+        # 1 x 2 x 3
+        # 4 x 2 x 1
+        # 1 x 2 x 20
+        a = self.weights.value.view(1, in_size, out_size)
+        # 2 x 20
+        a = self.weights.value
+        # 50 x 2 x 1
+        b = inputs.view(num_pts, in_size, 1)
+
+        # 50 x 2 x 20
+        c = (a * b).sum(1).view(num_pts, out_size)
+
+        return c + self.bias.value
+
+
+
+
 def default_log_fn(epoch, total_loss, correct, losses):
     print("Epoch ", epoch, " loss ", total_loss, "correct", correct)
 
@@ -60,10 +106,9 @@ class TensorTrain:
                 correct = int(((out.detach() > 0.5) == y2).sum()[0])
                 log_fn(epoch, total_loss, correct, losses)
 
-
 if __name__ == "__main__":
     PTS = 50
-    HIDDEN = 2
-    RATE = 0.5
-    data = minitorch.datasets["Simple"](PTS)
+    HIDDEN = 12
+    RATE = 0.2
+    data = minitorch.datasets["Spiral"](PTS)
     TensorTrain(HIDDEN).train(data, RATE)

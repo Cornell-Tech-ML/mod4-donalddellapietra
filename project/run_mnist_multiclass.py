@@ -41,9 +41,40 @@ class Conv2d(minitorch.Module):
         self.bias = RParam(out_channels, 1, 1)
 
     def forward(self, input):
-        # TODO: Implement for Task 4.5.
-        raise NotImplementedError("Need to implement for Task 4.5")
+        # Perform 2D convolution using the conv2d function
+        output = minitorch.conv2d(input, self.weights.value)
+        # Add bias to the output
+        return output + self.bias.value.view(1, self.bias.value.shape[0], 1, 1)
 
+
+# class Network(minitorch.Module):
+#     """
+#     Implement a CNN for MNist classification based on LeNet.
+
+#     This model should implement the following procedure:
+
+#     1. Apply a convolution with 4 output channels and a 3x3 kernel followed by a ReLU (save to self.mid)
+#     2. Apply a convolution with 8 output channels and a 3x3 kernel followed by a ReLU (save to self.out)
+#     3. Apply 2D pooling (either Avg or Max) with 4x4 kernel.
+#     4. Flatten channels, height, and width. (Should be size BATCHx392)
+#     5. Apply a Linear to size 64 followed by a ReLU and Dropout with rate 25%
+#     6. Apply a Linear to size C (number of classes).
+#     7. Apply a logsoftmax over the class dimension.
+#     """
+
+#     def __init__(self):
+#         super().__init__()
+
+#         # For vis
+#         self.mid = None
+#         self.out = None
+
+#         # TODO: Implement for Task 4.5.
+#         raise NotImplementedError("Need to implement for Task 4.5")
+
+#     def forward(self, x):
+#         # TODO: Implement for Task 4.5.
+#         raise NotImplementedError("Need to implement for Task 4.5")
 
 class Network(minitorch.Module):
     """
@@ -62,17 +93,39 @@ class Network(minitorch.Module):
 
     def __init__(self):
         super().__init__()
-
-        # For vis
-        self.mid = None
-        self.out = None
-
-        # TODO: Implement for Task 4.5.
-        raise NotImplementedError("Need to implement for Task 4.5")
+        # Define layers
+        self.conv1 = Conv2d(in_channels=1, out_channels=4, kh=3, kw=3)
+        self.conv2 = Conv2d(in_channels=4, out_channels=8, kh=3, kw=3)
+        self.linear1 = Linear(in_size=392, out_size=64)
+        self.linear2 = Linear(in_size=64, out_size=C)
+        self.dropout = 0.25
 
     def forward(self, x):
-        # TODO: Implement for Task 4.5.
-        raise NotImplementedError("Need to implement for Task 4.5")
+        # Step 1: Apply first convolution and ReLU
+        self.mid = self.conv1(x).relu()
+
+        # Step 2: Apply second convolution and ReLU
+        self.out = self.conv2(self.mid).relu()
+
+        # Step 3: Apply 2D pooling
+        pooled = minitorch.maxpool2d(self.out, kernel=(4, 4))
+
+
+        # Step 4: Flatten
+        batch_size, channels, height, width = pooled.shape
+        flattened_size = channels * height * width
+        flattened = pooled.view(batch_size, flattened_size)
+
+        # Step 5: Apply first linear layer, ReLU, and Dropout
+        x = self.linear1(flattened).relu()
+        x = minitorch.dropout(x, p=self.dropout, training=self.training)
+
+        # Step 6: Apply second linear layer
+        x = self.linear2(x)
+
+        # Step 7: Apply logsoftmax
+        return minitorch.logsoftmax(x, dim=1)
+
 
 
 def make_mnist(start, stop):
